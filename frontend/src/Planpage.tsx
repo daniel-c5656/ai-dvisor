@@ -34,48 +34,49 @@ export default function Planpage() {
     const { user } = useAuth();
     const [planTitle, setPlanTitle] = useState<string>("");
     const [view, setView] = useState<string>("calendar");
-    const [courses, setCourses] = useState<CourseSection[]>([
-        {
-            sectionId: "31009",
-            courseCode: "EE109",
-            courseName: "Introduction to Embedded Systems",
-            type: "Lecture",
-            days: [
-                "Tue",
-                "Thu"
-            ],
-            startTime: "14:00",
-            endTime: "15:20",
-            location: "THH301",
-            units: 4,
-            instructors: [
-                {
-                    firstName: "Mark",
-                    lastName: "Redekopp"
-                }
-            ]
-        },
-        {
-            sectionId: "30113",
-            courseCode: "CSCI310",
-            courseName: "Software Engineering",
-            type: "Lecture",
-            days: [
-                "Tue",
-                "Thu"
-            ],
-            startTime: "10:00",
-            endTime: "11:50",
-            location: "THH201",
-            units: 4,
-            instructors: [
-                {
-                    firstName: "Chao",
-                    lastName: "Wang"
-                }
-            ],
-        }
-    ]);
+    const [courses, setCourses] = useState<CourseSection[]>([])
+    // const [courses, setCourses] = useState<CourseSection[]>([
+    //     {
+    //         sectionId: "31009",
+    //         courseCode: "EE109",
+    //         courseName: "Introduction to Embedded Systems",
+    //         type: "Lecture",
+    //         days: [
+    //             "Tue",
+    //             "Thu"
+    //         ],
+    //         startTime: "14:00",
+    //         endTime: "15:20",
+    //         location: "THH301",
+    //         units: 4,
+    //         instructors: [
+    //             {
+    //                 firstName: "Mark",
+    //                 lastName: "Redekopp"
+    //             }
+    //         ]
+    //     },
+    //     {
+    //         sectionId: "30113",
+    //         courseCode: "CSCI310",
+    //         courseName: "Software Engineering",
+    //         type: "Lecture",
+    //         days: [
+    //             "Tue",
+    //             "Thu"
+    //         ],
+    //         startTime: "10:00",
+    //         endTime: "11:50",
+    //         location: "THH201",
+    //         units: 4,
+    //         instructors: [
+    //             {
+    //                 firstName: "Chao",
+    //                 lastName: "Wang"
+    //             }
+    //         ],
+    //     }
+    // ]);
 
     useEffect(() => {
         if (!planId) {
@@ -94,7 +95,7 @@ export default function Planpage() {
                         await updateDoc(planDocRef, { courses: [] });
                         setCourses([]);
                     } else {
-                        // TODO: setCourses(data.courses);
+                        setCourses(data.courses)
                     }
                 } else {
                     navigate("/dashboard");
@@ -128,6 +129,9 @@ export default function Planpage() {
     });
 
     function instructorsClean(instructorList: InstructorName[]): string {
+        
+        if (instructorList.length == 0) return ""
+        
         let res = ""
         
         for (let i=0; i < instructorList.length-1; i++) {

@@ -1,13 +1,11 @@
-import datetime
-from zoneinfo import ZoneInfo
 from google.adk.agents import Agent
+from google import adk
 import requests
-import firebase_admin
-from firebase_admin import firestore
+import asyncio
+import os
 
-MODEL = "gemini-2.5-flash"
-app = firebase_admin.initialize_app()
-db = firestore.client()
+BASE_MODEL = "gemini-2.5-flash"
+HELPER_MODEL = "gemini-2.0-flash-lite-001"
 
 def get_course_info(course_code: str, term: str) -> dict:
     """Retrieves the information for a specified course from the USC Classes API.
@@ -41,6 +39,34 @@ def get_course_info(course_code: str, term: str) -> dict:
         return {"status": "error", "error_message": "There doesn't seem to be any information on this course. Double-check the course and/or term."}
     else:
         return res.json()
+
+def get_major_info(major: str) -> str:
+    """Retrieves specific information for a particular major from a corresponding Markdown file.
+
+    Args:
+        major (str): The major to search for (e.g. "Computer Science", "International Relations", "History", "Business Administration")
+
+    Returns:
+        dict: A dictionary containing the course information, or an error if no such information exists.
+        Includes a 'status' key ('success' or 'error').
+        If 'success', includes a 'major_info' key with major information.
+        If 'error', includes an 'error_message' key.
+    """
+    print(f"--- Tool: get_major_info called for major {major}")
+    topic_to_file = {
+        "computerscience": "computer_science.md"
+    }
+
+    filename = topic_to_file.get(major.lower().replace(" ", ""))
+
+    if not filename:
+        return {"status": "error", "error_message": "I do not have any information about the major on file."}
+    try:
+        filename = "majors/" + filename
+        with open(filename, 'r', encoding="utf-8") as f:
+            return {"status": "success", "major_info": f.read()}
+    except FileNotFoundError:
+        return {"status": "error"}
 
 def add_section(course_code: str, section_id: str, term: str) -> dict:
     """Retrieves the information for a specified course from the USC Classes API.
@@ -100,12 +126,51 @@ def add_section(course_code: str, section_id: str, term: str) -> dict:
         "instructors": target_section["instructors"]
     }
 
-    return data_to_add
+    # Add this as a document to the user's Firebase, if it hasn't already been updated.
+
+    return {"status": "success", "data": data_to_add}
+
+def remove_section(section_id: str) -> dict:
+    """Removes a specified section from the user's course schedule.
+
+    Args:
+        section_id (str): The section ID of the section to remove.
+
+    Returns:
+        dict: A dictionary containing the outcome of the removal operation.
+              Includes a 'status' key ('success' or 'error').
+              If 'error', includes an 'error_message' key.
+              If 'success', includes a 'section_id' key indicating the section id deleted.
+    """
+
+    print(f"--Tool: remove_section called with section_id {section_id}")
+    return {"status": "success", "section_id": section_id}
+
+# Scheduling Agent
+
+scheduling_agent = None
+try:
+    scheduling_agent = Agent(
+        model=HELPER_MODEL,
+        name="scheduling_agent",
+        instruction="""You are the Course Scheduling Agent. Your ONLY tasks are to add and/or remove courses
+                       from the user's course plan.
+                       Use the 'add_section' tool to add a section to the user's calendar.
+                       Use the 'remove_section' tool to remove a section from the user's calendar.
+                       If the user wants to replace one section with another, remove the old section, then add the new section.
+                       If the user gives insufficient information for addition or removal, request it before attempting to make any changes.
+                       Do not engage in conversation normally. Only alert the user whether the addition was a success or failure.
+                    """,
+        description="Handles the addition or removal of course sections from the user's schedule using the 'add_section' and 'remove_section' tools.",
+        tools=[add_section, remove_section]
+    )
+except Exception as e:
+    print("Failed to create Scheduling Agent.")
 
 root_agent = Agent(
     name="aidvisor_agent",
-    model=MODEL,
-    description="Provides information services for courses at USC",
+    model=BASE_MODEL,
+    description="The main help agent. It provides information services for courses at USC, and delegates anything related to schedule changes to other dedicated agents.",
     instruction="""You are an academic course advisor for USC.
                    When the user asks for information about a specific course for a specific term,
                    use the 'get_course_info' tool to retrieve information about the course.
@@ -114,8 +179,13 @@ root_agent = Agent(
                    Then, ask the user if they would like to add a section.
                    If the user fails to specify a term, ask them for it before calling the tool and giving a response.
                    If the tool fails, simply inform the user and tell them to ensure their information is correct.
-                """,
-    tools=[get_course_info]
-)
 
-print(add_section("CSCI104", "29910", "20253"))
+                   If the user asks for guidance about their major, use the 'get_major_info' tool to get information about the major.
+                   Before recommending particular courses, use the 'get_course_info' tool on every course you plan to recommend and consult their prerequisites.
+                   DO NOT recommend any course that the user does not have the appropriate prerequisites for.
+                   You have specialized sub-agents:
+                   1. "scheduling_agent': Handles any requested changes to the user's schedule, including adding, removing, and replacing course sections. If the user wants to change their schedule, ask this agent to do the job.
+                """,
+    tools=[get_course_info, get_major_info],
+    sub_agents=[scheduling_agent]
+)

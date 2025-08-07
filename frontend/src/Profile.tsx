@@ -97,14 +97,14 @@ export default function Profile() {
 
                     <div className="flex flex-col">
                         <label htmlFor="major" className="mb-1">Major</label>
-                        <input type="text"
-                            id="major"
-                            name="major"
-                            className="p-2 outline rounded"
-                            value={major}
-                            onChange={(e) => {setMajor(e.target.value)}}
-
-                        />
+                        <select className="p-2 outline rounded"
+                                id="major" 
+                                name="major" 
+                                value={major} 
+                                onChange={(e) => {setMajor(e.target.value)}}>
+                            <option value="">--Please choose an option--</option>
+                            <option value="computerscience">Computer Science</option>
+                        </select>
                     </div>
                     <div className="flex flex-col">
                         <label htmlFor="school" className="mb-1">School</label>
