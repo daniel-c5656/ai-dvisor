@@ -20,3 +20,4 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const adkEndpoint = "https://ai-dvisor-service-75390045716.us-west1.run.app"

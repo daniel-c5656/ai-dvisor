@@ -1,11 +1,13 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { doc, updateDoc, onSnapshot } from "firebase/firestore";
-import { db } from './firebase.tsx';
+import { useEffect, useState, useRef } from "react";
+import { doc, updateDoc, onSnapshot, getDoc, arrayUnion, arrayRemove, deleteField } from "firebase/firestore";
+import { adkEndpoint, db } from './firebase.tsx';
 import { Calendar, momentLocalizer, type Event as CalendarEvent } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { useAuth } from "./useAuth.tsx";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 // Setup for react-big-calendar
 const localizer = momentLocalizer(moment);
@@ -28,6 +30,12 @@ interface CourseSection {
     instructors: InstructorName[]
 }
 
+interface Message {
+    id: number;
+    text: string;
+    sender: 'user' | 'agent';
+}
+
 export default function Planpage() {
     const navigate = useNavigate();
     const { planId } = useParams<{ planId: string }>();
@@ -35,6 +43,17 @@ export default function Planpage() {
     const [planTitle, setPlanTitle] = useState<string>("");
     const [view, setView] = useState<string>("calendar");
     const [courses, setCourses] = useState<CourseSection[]>([])
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [inputValue, setInputValue] = useState<string>('');
+    const [isAgentTyping, setIsAgentTyping] = useState<boolean>(false);
+    const [historyLoaded, setHistoryLoaded] = useState<boolean>(false);
+    const chatContainerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
+    }, [messages, isAgentTyping]);
     // const [courses, setCourses] = useState<CourseSection[]>([
     //     {
     //         sectionId: "31009",
@@ -55,29 +74,8 @@ export default function Planpage() {
     //                 lastName: "Redekopp"
     //             }
     //         ]
-    //     },
-    //     {
-    //         sectionId: "30113",
-    //         courseCode: "CSCI310",
-    //         courseName: "Software Engineering",
-    //         type: "Lecture",
-    //         days: [
-    //             "Tue",
-    //             "Thu"
-    //         ],
-    //         startTime: "10:00",
-    //         endTime: "11:50",
-    //         location: "THH201",
-    //         units: 4,
-    //         instructors: [
-    //             {
-    //                 firstName: "Chao",
-    //                 lastName: "Wang"
-    //             }
-    //         ],
     //     }
-    // ]);
-
+    // ]
     useEffect(() => {
         if (!planId) {
             navigate('/dashboard');
@@ -97,6 +95,10 @@ export default function Planpage() {
                     } else {
                         setCourses(data.courses)
                     }
+                    if (data.chat_history && data.chat_history.length > 0) {
+                        setMessages(data.chat_history);
+                    }
+                    setHistoryLoaded(true);
                 } else {
                     navigate("/dashboard");
                 }
@@ -106,6 +108,19 @@ export default function Planpage() {
         }
 
     }, [planId, navigate, user]);
+
+    useEffect(() => {
+        if (!historyLoaded) {
+            return;
+        }
+
+        if (user && planId) {
+            const docRef = doc(db, "users", user.uid, "coursePlans", planId);
+            updateDoc(docRef, {
+                chat_history: messages
+            });
+        }
+    }, [messages, user, planId, historyLoaded]);
 
     // --- Helper to map course sections to calendar events ---
     const dayMap: { [key: string]: number } = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
@@ -129,16 +144,183 @@ export default function Planpage() {
     });
 
     function instructorsClean(instructorList: InstructorName[]): string {
-        
+
         if (instructorList.length == 0) return ""
-        
+
         let res = ""
-        
-        for (let i=0; i < instructorList.length-1; i++) {
+
+        for (let i = 0; i < instructorList.length - 1; i++) {
             res += instructorList[i].lastName + ", " + instructorList[i].firstName
         }
-        res += instructorList[instructorList.length-1].lastName + ", " + instructorList[instructorList.length-1].firstName
+        res += instructorList[instructorList.length - 1].lastName + ", " + instructorList[instructorList.length - 1].firstName
         return res
+    }
+
+    async function handleSendMessage() {
+        if (inputValue.trim() === '') return;
+
+        const userMessage = {
+            id: Date.now(),
+            text: inputValue,
+            sender: 'user' as const,
+        };
+
+        setMessages(prev => [...prev, userMessage]);
+        const currentInput = inputValue;
+        setInputValue('');
+        setIsAgentTyping(true);
+
+        // Simulate agent response
+        // setTimeout(() => {
+        //     const agentResponse = {
+        //         id: Date.now(),
+        //         text: `I am a placeholder response to: "${currentInput}"`, 
+        //         sender: 'agent' as const,
+        //     };
+        //     setIsAgentTyping(false);
+        //     setMessages(prev => [...prev, agentResponse]);
+        // }, 1000);
+
+        if (user && planId) {
+
+            // Start a new chat if there's no messages.
+            if (messages.length == 0) {
+                const userInfo = await getDoc(doc(db, "users", user.uid))
+                const userData = userInfo.data()
+
+                let major = ""
+                if (userData) {
+                    major = userData.major
+                }
+
+                user.getIdToken
+                console.log("Data reset")
+                const deleteRes = await fetch(`${adkEndpoint}/apps/ai-dvisor/users/${user.uid}/sessions/${planId}`, {
+                    method: "DELETE"
+                })
+
+                if (deleteRes.status >= 400) {
+                    const agentResponse = {
+                        id: Date.now(),
+                        text: "Oops, it appears the agent is down. Please try again later.",
+                        sender: 'agent' as const,
+                    };
+                    setMessages(prev => [...prev, agentResponse])
+                    setIsAgentTyping(false)
+                    return
+                }
+
+
+                await fetch(`${adkEndpoint}/apps/ai-dvisor/users/${user.uid}/sessions/${planId}`, {
+                    method: "POST",
+                    headers: {
+                        'Content-Type': "application/json"
+                    },
+                    body: JSON.stringify({ "context": { "major": major } })
+                })
+            }
+
+            // Make the request.
+            const contextualizedInput = `My current course plan is:\n${JSON.stringify(courses, null, 2)}\n\nMy request is: ${currentInput}`
+
+            console.log(contextualizedInput)
+
+            const agentApiRes = await fetch(`${adkEndpoint}/run`, {
+                method: "POST",
+                headers: {
+                    'Content-Type': "application/json",
+                },
+                body: JSON.stringify({
+                    app_name: "ai-dvisor",
+                    user_id: user.uid,
+                    session_id: planId,
+                    new_message: {
+                        role: "user",
+                        parts: [
+                            {
+                                "text": contextualizedInput
+                            }
+                        ]
+                    },
+                    streaming: false
+                })
+            })
+
+            if (agentApiRes.status >= 400) {
+                const agentResponse = {
+                    id: Date.now(),
+                    text: "Oops, it appears the agent is down. Please try again later.",
+                    sender: 'agent' as const,
+                };
+                setMessages(prev => [...prev, agentResponse])
+                setIsAgentTyping(false)
+                return
+            }
+
+            const agentResData = await agentApiRes.json()
+            const planDataRef = doc(db, "users", user.uid, "coursePlans", planId)
+            // console.log(agentResData)
+            agentResData.forEach(async (element: { content: { parts: any[]; }; }) => {
+                const operation = element.content.parts[0]
+                if (operation.functionResponse) {
+                    switch (operation.functionResponse.name) {
+
+                        case "add_section":
+                            if (operation.functionResponse.response.status === "success") {
+                                await updateDoc(planDataRef, {
+                                    courses: arrayUnion(operation.functionResponse.response.data)
+                                })
+                            }
+                            break
+
+                        case "remove_section":
+                            if (operation.functionResponse.response.status === "success") {
+                                const idToRemove = operation.functionResponse.response.section_id
+                                // console.log(idToRemove)
+                                let sectionToRemove
+
+                                const currData = await getDoc(planDataRef)
+                                const currCourses = currData.get("courses")
+                                currCourses.forEach((element: CourseSection) => {
+                                    if (element.sectionId == idToRemove) {
+                                        sectionToRemove = element
+                                    }
+                                });
+
+                                await updateDoc(planDataRef, {
+                                    courses: arrayRemove(sectionToRemove)
+                                })
+                            }
+                            break
+                    }
+                }
+                if (operation.text) {
+
+                    const agentResponse = {
+                        id: Date.now(),
+                        text: operation.text,
+                        sender: 'agent' as const,
+                    };
+                    setMessages(prev => [...prev, agentResponse])
+                }
+            });
+
+        }
+        setIsAgentTyping(false)
+
+    };
+
+    async function handleAgentReset() {
+        if (confirm("Are you sure you want to reset the chat?") && user && planId) {
+            setMessages([])
+
+            const planDocRef = doc(db, "users", user.uid, "coursePlans", planId)
+
+            await updateDoc(planDocRef, {
+                chat_history: deleteField()
+            })
+
+        }
     }
 
     return (
@@ -168,7 +350,7 @@ export default function Planpage() {
                                         formats={{
                                             dayFormat: 'ddd', // Correct format for the week view header
                                         }}
-                                        
+
                                     />
                                 </div>
                             ) : (
@@ -195,10 +377,49 @@ export default function Planpage() {
                         }
                     </div>
                     <div className="col-span-1">
-                        {/* Chat menu goes here */}
-                        <div className="outline rounded h-full p-4">
-                            <h2 className="text-2xl font-bold">Chat</h2>
-                            {/* Chat interface will be built here */}
+                        <div className="outline rounded h-full p-4 flex flex-col" style={{ height: '80vh' }}>
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className="text-2xl font-bold text-left">AI-dvisor</h2>
+                                <button onClick={handleAgentReset} className="bg-gray-300 hover:bg-gray-400 text-black font-bold py-1 px-2 rounded text-sm cursor-pointer">
+                                    Reset
+                                </button>
+                            </div>
+                            <div ref={chatContainerRef} className="flex-grow overflow-y-auto mb-4 p-2 space-y-4 bg-gray-50 rounded">
+                                {messages.map(message => (
+                                    <div key={message.id} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                        <div className={`rounded-lg px-3 py-2 max-w-xl ${message.sender === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-black'}`}>
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.text}</ReactMarkdown>
+                                        </div>
+                                    </div>
+                                ))}
+                                {isAgentTyping && (
+                                    <div className="flex justify-start">
+                                        <div className="rounded-lg px-3 py-2 max-w-xs bg-gray-200 text-blue-400">
+                                            Waiting for response...
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex">
+                                <input
+                                    type="text"
+                                    className="flex-grow border rounded-l-lg p-2"
+                                    placeholder="Ask me anything..."
+                                    value={inputValue}
+                                    onChange={(e) => setInputValue(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            handleSendMessage();
+                                        }
+                                    }}
+                                />
+                                <button
+                                    className="bg-blue-500 text-white rounded-r-lg px-4 hover:bg-blue-600 cursor-pointer"
+                                    onClick={handleSendMessage}
+                                >
+                                    Send
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

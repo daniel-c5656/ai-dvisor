@@ -1,6 +1,7 @@
 from google.adk.agents import Agent
 from google import adk
 import requests
+import firebase_admin.auth
 import asyncio
 import os
 
@@ -62,7 +63,7 @@ def get_major_info(major: str) -> str:
     if not filename:
         return {"status": "error", "error_message": "I do not have any information about the major on file."}
     try:
-        filename = "majors/" + filename
+        filename = "ai-dvisor/majors/" + filename
         with open(filename, 'r', encoding="utf-8") as f:
             return {"status": "success", "major_info": f.read()}
     except FileNotFoundError:
@@ -154,12 +155,12 @@ try:
         model=HELPER_MODEL,
         name="scheduling_agent",
         instruction="""You are the Course Scheduling Agent. Your ONLY tasks are to add and/or remove courses
-                       from the user's course plan.
-                       Use the 'add_section' tool to add a section to the user's calendar.
+                       from the user's course plan. Leave all other tasks to "aidvisor_agent".
+                       Use the 'add_section' tool to add a section to the user's calendar. If there's a potential conflict, ask the user to confirm.
                        Use the 'remove_section' tool to remove a section from the user's calendar.
                        If the user wants to replace one section with another, remove the old section, then add the new section.
                        If the user gives insufficient information for addition or removal, request it before attempting to make any changes.
-                       Do not engage in conversation normally. Only alert the user whether the addition was a success or failure.
+                       Do not engage in conversation normally. Only alert the user of the changes you made to their schedule (i.e. courses added and/or dropped).
                     """,
         description="Handles the addition or removal of course sections from the user's schedule using the 'add_section' and 'remove_section' tools.",
         tools=[add_section, remove_section]
@@ -170,7 +171,7 @@ except Exception as e:
 root_agent = Agent(
     name="aidvisor_agent",
     model=BASE_MODEL,
-    description="The main help agent. It provides information services for courses at USC, and delegates anything related to schedule changes to other dedicated agents.",
+    description="The main help agent. It provides information services for courses at USC and the user's own schedule, and delegates anything related to schedule changes to other dedicated agents.",
     instruction="""You are an academic course advisor for USC.
                    When the user asks for information about a specific course for a specific term,
                    use the 'get_course_info' tool to retrieve information about the course.
@@ -183,6 +184,8 @@ root_agent = Agent(
                    If the user asks for guidance about their major, use the 'get_major_info' tool to get information about the major.
                    Before recommending particular courses, use the 'get_course_info' tool on every course you plan to recommend and consult their prerequisites.
                    DO NOT recommend any course that the user does not have the appropriate prerequisites for.
+
+                   The user will give you their schedule in context. Use their current schedule to help you answer any questions they may have.
                    You have specialized sub-agents:
                    1. "scheduling_agent': Handles any requested changes to the user's schedule, including adding, removing, and replacing course sections. If the user wants to change their schedule, ask this agent to do the job.
                 """,
