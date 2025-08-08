@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import { doc, updateDoc, onSnapshot, getDoc, arrayUnion, arrayRemove, deleteField } from "firebase/firestore";
-import { adkEndpoint, db } from './firebase.tsx';
+import { db } from './firebase.tsx';
 import { Calendar, momentLocalizer, type Event as CalendarEvent } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -195,9 +195,11 @@ export default function Planpage() {
 
                 user.getIdToken
                 console.log("Data reset")
-                const deleteRes = await fetch(`${adkEndpoint}/apps/ai-dvisor/users/${user.uid}/sessions/${planId}`, {
+                const deleteRes = await fetch(`/apps/ai-dvisor/users/${user.uid}/sessions/${planId}`, {
                     method: "DELETE"
                 })
+
+                console.log(deleteRes)
 
                 if (deleteRes.status >= 400) {
                     const agentResponse = {
@@ -211,13 +213,16 @@ export default function Planpage() {
                 }
 
 
-                await fetch(`${adkEndpoint}/apps/ai-dvisor/users/${user.uid}/sessions/${planId}`, {
+                const createRes = await fetch(`/apps/ai-dvisor/users/${user.uid}/sessions/${planId}`, {
                     method: "POST",
                     headers: {
                         'Content-Type': "application/json"
                     },
                     body: JSON.stringify({ "context": { "major": major } })
                 })
+
+                console.log(createRes)
+
             }
 
             // Make the request.
@@ -225,7 +230,7 @@ export default function Planpage() {
 
             console.log(contextualizedInput)
 
-            const agentApiRes = await fetch(`${adkEndpoint}/run`, {
+            const agentApiRes = await fetch(`/run`, {
                 method: "POST",
                 headers: {
                     'Content-Type': "application/json",

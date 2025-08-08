@@ -168,7 +168,7 @@ try:
 except Exception as e:
     print("Failed to create Scheduling Agent.")
 
-root_agent = Agent(
+main_agent = Agent(
     name="aidvisor_agent",
     model=BASE_MODEL,
     description="The main help agent. It provides information services for courses at USC and the user's own schedule, and delegates anything related to schedule changes to other dedicated agents.",
@@ -192,3 +192,5 @@ root_agent = Agent(
     tools=[get_course_info, get_major_info],
     sub_agents=[scheduling_agent]
 )
+
+root_agent = main_agent

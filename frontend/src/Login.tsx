@@ -20,7 +20,7 @@ export default function Login() {
         }
 
         signInWithEmailAndPassword(auth, email, password)
-            .then((userCredential) => {
+            .then(() => {
                 setError(''); // Clear error on success
                 navigate('/dashboard')
             })
