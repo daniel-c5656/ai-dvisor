@@ -10,16 +10,20 @@
       {
         "source": "/run",
         "run": {
-          "serviceId": "ai-dvisor-service",
+          "serviceId": "ai-dvisor-466322",
           "region": "us-west1"
         }
       },
       {
         "source": "/apps/**",
         "run": {
-          "serviceId": "ai-dvisor-service",
+          "serviceId": "ai-dvisor-466322",
           "region": "us-west1"
         }
+      },
+      {
+        "source": "**",
+        "destination": "/index.html"
       }
     ]
   }

@@ -100,7 +100,7 @@ export default function Dashboard() {
                         return {
                             id: doc.id,
                             title: docData.title,
-                            courseCount: docData.courseCount,
+                            courseCount: docData.courses.length,
                             modified: modifiedTimestamp
                                 ? modifiedTimestamp.toDate().toLocaleString()
                                 : "N/A",

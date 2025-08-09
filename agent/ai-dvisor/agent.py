@@ -1,9 +1,7 @@
 from google.adk.agents import Agent
 from google import adk
 import requests
-import firebase_admin.auth
-import asyncio
-import os
+
 
 BASE_MODEL = "gemini-2.5-flash"
 HELPER_MODEL = "gemini-2.0-flash-lite-001"
@@ -63,7 +61,7 @@ def get_major_info(major: str) -> str:
     if not filename:
         return {"status": "error", "error_message": "I do not have any information about the major on file."}
     try:
-        filename = "ai-dvisor/majors/" + filename
+        filename = "aidvisor/majors/" + filename
         with open(filename, 'r', encoding="utf-8") as f:
             return {"status": "success", "major_info": f.read()}
     except FileNotFoundError:
@@ -168,7 +166,7 @@ try:
 except Exception as e:
     print("Failed to create Scheduling Agent.")
 
-main_agent = Agent(
+root_agent = Agent(
     name="aidvisor_agent",
     model=BASE_MODEL,
     description="The main help agent. It provides information services for courses at USC and the user's own schedule, and delegates anything related to schedule changes to other dedicated agents.",
@@ -192,5 +190,3 @@ main_agent = Agent(
     tools=[get_course_info, get_major_info],
     sub_agents=[scheduling_agent]
 )
-
-root_agent = main_agent

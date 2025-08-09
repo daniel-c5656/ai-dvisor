@@ -201,7 +201,16 @@ export default function Planpage() {
 
                 console.log(deleteRes)
 
-                if (deleteRes.status >= 400) {
+
+                const createRes = await fetch(`/apps/ai-dvisor/users/${user.uid}/sessions/${planId}`, {
+                    method: "POST",
+                    headers: {
+                        'Content-Type': "application/json"
+                    },
+                    body: JSON.stringify({ "context": { "major": major } })
+                })
+
+                if (createRes.status >= 400) {
                     const agentResponse = {
                         id: Date.now(),
                         text: "Oops, it appears the agent is down. Please try again later.",
@@ -211,15 +220,6 @@ export default function Planpage() {
                     setIsAgentTyping(false)
                     return
                 }
-
-
-                const createRes = await fetch(`/apps/ai-dvisor/users/${user.uid}/sessions/${planId}`, {
-                    method: "POST",
-                    headers: {
-                        'Content-Type': "application/json"
-                    },
-                    body: JSON.stringify({ "context": { "major": major } })
-                })
 
                 console.log(createRes)
 
