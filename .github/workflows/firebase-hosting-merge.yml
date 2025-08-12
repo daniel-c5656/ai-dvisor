@@ -19,4 +19,3 @@ jobs:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_AI_DVISOR_466322 }}
           channelId: live
           projectId: ai-dvisor-466322
-          entryPoint: ./frontend
