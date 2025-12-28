@@ -7,7 +7,7 @@ load_dotenv()
 # Get the directory where main.py is located
 AGENT_DIR = os.path.dirname(os.path.abspath(__file__))
 # Example allowed origins for CORS
-ALLOWED_ORIGINS = ["http://localhost", "http://localhost:8080", "*"]
+# ALLOWED_ORIGINS = ["http://localhost", "http://localhost:8080", "*"]
 # Set web=True if you intend to serve a web interface, False otherwise
 SERVE_WEB_INTERFACE = False
 
@@ -15,7 +15,7 @@ SERVE_WEB_INTERFACE = False
 # Ensure the agent directory name ('capital_agent') matches your agent folder
 app = get_fast_api_app(
     agents_dir=AGENT_DIR,
-    allow_origins=ALLOWED_ORIGINS,
+    # allow_origins=ALLOWED_ORIGINS,
     web=SERVE_WEB_INTERFACE,
 )
 

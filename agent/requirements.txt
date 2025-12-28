@@ -1,2 +1,2 @@
-google-adk==1.8.0
+google-adk
 python-dotenv
