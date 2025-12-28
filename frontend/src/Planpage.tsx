@@ -150,7 +150,7 @@ export default function Planpage() {
         let res = ""
 
         for (let i = 0; i < instructorList.length - 1; i++) {
-            res += instructorList[i].lastName + ", " + instructorList[i].firstName
+            res += instructorList[i].lastName + ", " + instructorList[i].firstName + "; "
         }
         res += instructorList[instructorList.length - 1].lastName + ", " + instructorList[instructorList.length - 1].firstName
         return res
@@ -328,6 +328,17 @@ export default function Planpage() {
         }
     }
 
+    async function handleDeleteCourse(course: CourseSection) {
+
+        setCourses(courses.filter(c => c.sectionId !== course.sectionId));
+        if (user && planId) {
+            const planDocRef = doc(db, "users", user.uid, "coursePlans", planId)
+            await updateDoc(planDocRef, {
+                courses: arrayRemove(course)
+            })
+        }
+    }
+
     return (
         <>
             <div>
@@ -365,13 +376,22 @@ export default function Planpage() {
                                         <ul>
                                             {courses.map((course) => (
                                                 <li key={course.sectionId} className="p-4 my-2 border rounded-lg shadow-md bg-white">
+                                                    <div className="flex justify-end">
+                                                        <button
+                                                            className='bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded cursor-pointer'
+                                                            onClick={() => {if (confirm('Are you sure you want to delete this course?')) handleDeleteCourse(course)}}
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    </div>
                                                     <p className="font-bold text-xl">{course.courseCode} - {course.courseName}</p>
                                                     <p className="text-gray-700">Section: {course.sectionId} ({course.type})</p>
                                                     <p className="text-gray-700">Time: {course.days.join(', ')} {course.startTime} - {course.endTime}</p>
                                                     <p className="text-gray-700">Location: {course.location}</p>
                                                     <p className="text-gray-700">Units: {course.units}</p>
                                                     <p className="text-gray-700">Instructors: {instructorsClean(course.instructors)}</p>
-                                                </li>
+                                                
+                                                </li>                                                
                                             ))}
                                         </ul>
                                     ) : (
