@@ -342,7 +342,7 @@ export default function Planpage() {
     return (
         <>
             <div>
-                <div className="m-5 text-5xl">{planTitle}</div>
+                <div className="m-5 text-4xl">{planTitle}</div>
                 <div className="grid grid-flow-col grid-cols-3 p-5 gap-5">
                     <div className="col-span-2">
                         <div className="grid grid-cols-2 gap-4 p-2 text-left">
@@ -402,14 +402,14 @@ export default function Planpage() {
                         }
                     </div>
                     <div className="col-span-1">
-                        <div className="outline rounded h-full p-4 flex flex-col" style={{ height: '80vh' }}>
+                        <div className="shadow-lg border border-gray-200 rounded h-full p-4 flex flex-col" style={{ height: '80vh' }}>
                             <div className="flex justify-between items-center mb-4">
                                 <h2 className="text-2xl font-bold text-left">AI-dvisor</h2>
                                 <button onClick={handleAgentReset} className="bg-gray-300 hover:bg-gray-400 text-black font-bold py-1 px-2 rounded text-sm cursor-pointer">
                                     Reset
                                 </button>
                             </div>
-                            <div ref={chatContainerRef} className="flex-grow overflow-y-auto mb-4 p-2 space-y-4 bg-gray-50 rounded">
+                            <div ref={chatContainerRef} className="flex-grow overflow-y-auto mb-4 p-2 space-y-4 rounded">
                                 {messages.map(message => (
                                     <div key={message.id} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                                         <div className={`rounded-lg px-3 py-2 max-w-xl ${message.sender === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-black'}`}>
@@ -428,7 +428,7 @@ export default function Planpage() {
                             <div className="flex">
                                 <input
                                     type="text"
-                                    className="flex-grow border rounded-l-lg p-2"
+                                    className="flex-grow border border-gray-300 shadow-sm rounded-l-lg p-2"
                                     placeholder="Ask me anything..."
                                     value={inputValue}
                                     onChange={(e) => setInputValue(e.target.value)}

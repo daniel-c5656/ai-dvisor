@@ -2,7 +2,7 @@ import { NavLink } from "react-router-dom";
 
 export default function Homepage() {
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-6">
+        <div className="flex flex-col items-center justify-center min-h-screen p-6">
             <div className="max-w-4xl w-full bg-white shadow-lg rounded-lg p-8">
                 <h1 className='text-5xl font-bold text-center text-gray-800 mb-4'>AI-dvisor</h1>
                 <p className="text-lg text-center text-gray-600 mb-8">
@@ -31,9 +31,9 @@ export default function Homepage() {
                 <div className="text-center">
                     <NavLink
                         className="inline-block px-8 py-3 text-lg font-semibold text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors"
-                        to='/signup'
+                        to='/dashboard'
                     >
-                        Sign Up Now
+                        Dashboard
                     </NavLink>
                 </div>
             </div>

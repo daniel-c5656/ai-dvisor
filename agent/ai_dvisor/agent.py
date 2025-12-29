@@ -1,10 +1,44 @@
 from google.adk.agents import Agent
 from google import adk
 import requests
+import firebase_admin
+from firebase_admin import credentials, firestore
+from .context import user_context
 
+# Initialize Firebase Admin SDK
+if not firebase_admin._apps:
+    cred = credentials.ApplicationDefault()
+    firebase_admin.initialize_app(cred)
+
+db = firestore.client()
 
 BASE_MODEL = "gemini-2.5-flash"
 HELPER_MODEL = "gemini-2.0-flash-lite-001"
+
+def get_user_plan(plan_id: str) -> dict:
+    """Retrieves the current course plan for the authenticated user.
+    
+    Args:
+        plan_id (str): The ID of the plan to retrieve.
+        
+    Returns:
+        dict: The user's course plan or an error message.
+    """
+    user_id = user_context.get()
+    if not user_id:
+        return {"status": "error", "error_message": "User not authenticated."}
+
+    print(f"--- Tool: get_user_plan called for user {user_id}, plan {plan_id}")
+
+    try:
+        doc_ref = db.collection("users").document(user_id).collection("coursePlans").document(plan_id)
+        doc = doc_ref.get()
+        if doc.exists:
+            return {"status": "success", "plan": doc.to_dict()}
+        else:
+            return {"status": "error", "error_message": "Plan not found."}
+    except Exception as e:
+        return {"status": "error", "error_message": str(e)}
 
 def get_course_info(course_code: str, term: str) -> dict:
     """Retrieves the information for a specified course from the USC Classes API.
@@ -180,7 +214,8 @@ root_agent = Agent(
                    Then, ask the user if they would like to add a section.
                    If the user fails to specify a term, ask them for it before calling the tool and giving a response.
                    If the tool fails, simply inform the user and tell them to ensure their information is correct.
+                   You can also access the user's current course plan using 'get_user_plan' to provide more personalized advice.
                 """,
-    tools=[get_course_info],
+    tools=[get_course_info, get_user_plan],
     sub_agents=[scheduling_agent]
 )

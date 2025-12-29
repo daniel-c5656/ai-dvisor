@@ -39,8 +39,8 @@ export default function Dashboard() {
         },
         {
             id: 4,
-            title: "OASIS",
-            link: "https://my.usc.edu/portal/oasis/oasisbridge.php"
+            title: "Experience USC",
+            link: "https://experience.usc.edu"
         },
         {
             id: 5,
@@ -118,7 +118,7 @@ export default function Dashboard() {
         <>
             <div className="m-10 text-6xl">Dashboard</div>
             <div className="grid grid-flow-col grid-cols-3 p-10 gap-5">
-                <div className="col-span-2 outline rounded">
+                <div className="col-span-2 shadow-lg border border-gray-200 rounded">
                     <div className="flex justify-between items-center p-4">
                         <h2 className="text-2xl font-bold text-left">Course Plans</h2>
                         <button
@@ -136,7 +136,7 @@ export default function Dashboard() {
                     </div>
                     {coursePlans.length > 0 ? (
                         coursePlans.map((plan) => (
-                            <div key={plan.id} className="grid grid-cols-4 gap-4 p-4 border-t text-left items-center">
+                            <div key={plan.id} className="grid grid-cols-4 gap-4 p-4 text-left items-center">
                                 <div><Link className="text-blue-500 underline" to={`/plans/${plan.id}`}>{plan.title}</Link></div>
                                 <div>{plan.courseCount}</div>
                                 <div>{plan.modified}</div>
@@ -154,7 +154,7 @@ export default function Dashboard() {
                         <div className="p-4 text-center">No course plans found.</div>
                     )}
                 </div>
-                <div className="col-span-1 outline rounded">
+                <div className="col-span-1 shadow-lg border border-gray-200 rounded">
                     <div className="flex justify-between items-center p-4">
                         <h2 className="text-2xl font-bold text-left">Quick Links</h2>
                     </div>
