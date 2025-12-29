@@ -67,6 +67,8 @@ def get_major_info(major: str) -> str:
     except FileNotFoundError:
         return {"status": "error"}
 
+
+
 def add_section(course_code: str, section_id: str, term: str) -> dict:
     """Retrieves the information for a specified course from the USC Classes API.
 
@@ -178,15 +180,7 @@ root_agent = Agent(
                    Then, ask the user if they would like to add a section.
                    If the user fails to specify a term, ask them for it before calling the tool and giving a response.
                    If the tool fails, simply inform the user and tell them to ensure their information is correct.
-
-                   If the user asks for guidance about their major, use the 'get_major_info' tool to get information about the major.
-                   Before recommending particular courses, use the 'get_course_info' tool on every course you plan to recommend and consult their prerequisites.
-                   DO NOT recommend any course that the user does not have the appropriate prerequisites for.
-
-                   The user will give you their schedule in context. Use their current schedule to help you answer any questions they may have.
-                   You have specialized sub-agents:
-                   1. "scheduling_agent': Handles any requested changes to the user's schedule, including adding, removing, and replacing course sections. If the user wants to change their schedule, ask this agent to do the job.
                 """,
-    tools=[get_course_info, get_major_info],
+    tools=[get_course_info],
     sub_agents=[scheduling_agent]
 )
