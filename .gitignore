@@ -140,3 +140,4 @@ vite.config.ts.timestamp-*
 
 set_vars.sh
 GEMINI.md
+backend/firebase-admin.json

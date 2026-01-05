@@ -1,0 +1,4 @@
+google-cloud-aiplatform
+fastapi[standard]
+python-dotenv
+firebase-admin

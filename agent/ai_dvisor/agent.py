@@ -1,44 +1,12 @@
 from google.adk.agents import Agent
 from google import adk
+from google.adk.tools.tool_context import ToolContext
+
 import requests
-import firebase_admin
-from firebase_admin import credentials, firestore
-from .context import user_context
-
-# Initialize Firebase Admin SDK
-if not firebase_admin._apps:
-    cred = credentials.ApplicationDefault()
-    firebase_admin.initialize_app(cred)
-
-db = firestore.client()
 
 BASE_MODEL = "gemini-2.5-flash"
 HELPER_MODEL = "gemini-2.0-flash-lite-001"
-
-def get_user_plan(plan_id: str) -> dict:
-    """Retrieves the current course plan for the authenticated user.
-    
-    Args:
-        plan_id (str): The ID of the plan to retrieve.
-        
-    Returns:
-        dict: The user's course plan or an error message.
-    """
-    user_id = user_context.get()
-    if not user_id:
-        return {"status": "error", "error_message": "User not authenticated."}
-
-    print(f"--- Tool: get_user_plan called for user {user_id}, plan {plan_id}")
-
-    try:
-        doc_ref = db.collection("users").document(user_id).collection("coursePlans").document(plan_id)
-        doc = doc_ref.get()
-        if doc.exists:
-            return {"status": "success", "plan": doc.to_dict()}
-        else:
-            return {"status": "error", "error_message": "Plan not found."}
-    except Exception as e:
-        return {"status": "error", "error_message": str(e)}
+BACKEND_URL = "https://ai-dvisor-fastapi-75390045716.us-west1.run.app"
 
 def get_course_info(course_code: str, term: str) -> dict:
     """Retrieves the information for a specified course from the USC Classes API.
@@ -73,43 +41,71 @@ def get_course_info(course_code: str, term: str) -> dict:
     else:
         return res.json()
 
-def get_major_info(major: str) -> str:
-    """Retrieves specific information for a particular major from a corresponding Markdown file.
+# def get_major_info(major: str) -> str:
+#     """Retrieves specific information for a particular major from a corresponding Markdown file.
+
+#     Args:
+#         major (str): The major to search for (e.g. "Computer Science", "International Relations", "History", "Business Administration")
+
+#     Returns:
+#         dict: A dictionary containing the course information, or an error if no such information exists.
+#         Includes a 'status' key ('success' or 'error').
+#         If 'success', includes a 'major_info' key with major information.
+#         If 'error', includes an 'error_message' key.
+#     """
+#     print(f"--- Tool: get_major_info called for major {major}")
+#     topic_to_file = {
+#         "computerscience": "computer_science.md"
+#     }
+
+#     filename = topic_to_file.get(major.lower().replace(" ", ""))
+
+#     if not filename:
+#         return {"status": "error", "error_message": "I do not have any information about the major on file."}
+#     try:
+#         filename = "aidvisor/majors/" + filename
+#         with open(filename, 'r', encoding="utf-8") as f:
+#             return {"status": "success", "major_info": f.read()}
+#     except FileNotFoundError:
+#         return {"status": "error"}
+
+def get_plan_info(tool_context: ToolContext) -> dict:
+    """Retrieves the current details of the user's course plan schedule.
 
     Args:
-        major (str): The major to search for (e.g. "Computer Science", "International Relations", "History", "Business Administration")
+        tool_context (ToolContext): The tool context object.
 
     Returns:
-        dict: A dictionary containing the course information, or an error if no such information exists.
-        Includes a 'status' key ('success' or 'error').
-        If 'success', includes a 'major_info' key with major information.
-        If 'error', includes an 'error_message' key.
+        dict: A dictionary containing the plan information.
+              Includes a 'status' key ('success' or 'error').
+              If 'success', includes a 'plan_info' key with details on the plan.
+              If 'error', includes an 'error_message' key.
     """
-    print(f"--- Tool: get_major_info called for major {major}")
-    topic_to_file = {
-        "computerscience": "computer_science.md"
-    }
 
-    filename = topic_to_file.get(major.lower().replace(" ", ""))
+    user_id = tool_context._invocation_context.session.user_id
+    # session_id = tool_context._invocation_context.session.id
+    plan_id = tool_context.state.get("plan_id")
+    
+    res = requests.get(
+        f"{BACKEND_URL}/plan",
+        params={
+            "user_id": user_id,
+            "plan_id": plan_id
+        })
+    
+    if res.status_code >= 400:
+        return {"status": "error", "error_message": "Failed to get course plan"}
+    else:
+        return {"status": "success", "plan_info": res.json()}
 
-    if not filename:
-        return {"status": "error", "error_message": "I do not have any information about the major on file."}
-    try:
-        filename = "aidvisor/majors/" + filename
-        with open(filename, 'r', encoding="utf-8") as f:
-            return {"status": "success", "major_info": f.read()}
-    except FileNotFoundError:
-        return {"status": "error"}
-
-
-
-def add_section(course_code: str, section_id: str, term: str) -> dict:
+def add_section(course_code: str, section_id: str, term: str, tool_context: ToolContext) -> dict:
     """Retrieves the information for a specified course from the USC Classes API.
 
     Args:
         course_code (str): The code of the course (e.g., "CSCI 104", "WRIT-150", "MATH225").
         section_id (str): The section id of the course (e.g., '29937').
         term (str): The term code of the course, where the first 4 digits are the year and the last digit is the term (1=Spring, 2=Summer, 3=Fall) (e.g., 20241 for Spring 2024, 20253 for Fall 2025)
+        tool_context (ToolContext): The tool context object.
 
     Returns:
         dict: A dictionary confirming whether the addition was successful.
@@ -125,47 +121,67 @@ def add_section(course_code: str, section_id: str, term: str) -> dict:
 
     # Make the request to the API.
 
-    res = requests.get(url="https://classes.usc.edu/api/Courses/Course", params={
-        "termCode": term,
-        "courseCode": course_normalized
-    })
+    user_id = tool_context._invocation_context.session.user_id
+    # session_id = tool_context._invocation_context.session.id
+    plan_id = tool_context.state.get("plan_id")
 
-    fail = {"status": "error", "error_message": "I was unable to find the section you were looking for. Double-check if the section or course exists or that USC's servers are online."}
+    res = requests.post(
+        url=f"{BACKEND_URL}/plan/add",
+        params = {
+            "user_id": user_id,
+            "term_code": term,
+            "course_code": course_normalized,
+            "section_id": section_id_normalized,
+            "plan_id": plan_id
+        }
+    )
 
-    if res.status_code >= 400 or res.status_code == 204:
-        return fail
+    if res.status_code == 200:
+        return {"status": "success"}
+    else:
+        return {"status": "error", "error_message": "I was unable to find the section you were looking for. Double-check if the section or course exists or that USC's servers are online."}
+
+    # res = requests.get(url="https://classes.usc.edu/api/Courses/Course", params={
+    #     "termCode": term,
+    #     "courseCode": course_normalized
+    # })
+
+    # fail = {"status": "error", "error_message": "I was unable to find the section you were looking for. Double-check if the section or course exists or that USC's servers are online."}
+
+    # if res.status_code >= 400 or res.status_code == 204:
+    #     return fail
     
-    data = res.json()
-    sections: list = data["sections"]
-    target_section = None
+    # data = res.json()
+    # sections: list = data["sections"]
+    # target_section = None
 
 
-    for section in sections:
-        if section["sisSectionId"] == section_id:
-            target_section = section
-            break
+    # for section in sections:
+    #     if section["sisSectionId"] == section_id:
+    #         target_section = section
+    #         break
     
-    if target_section == None:
-        return fail
+    # if target_section == None:
+    #     return fail
 
-    data_to_add = {
-        "sectionId": section_id,
-        "courseCode": course_code,
-        "courseName": data["name"],
-        "type": target_section["rnrMode"],
-        "days": target_section['schedule'][0]["days"],
-        "startTime": target_section['schedule'][0]["startTime"],
-        "endTime": target_section['schedule'][0]["endTime"],
-        "location": target_section['schedule'][0]["location"],
-        "units": data["courseUnits"][0],
-        "instructors": target_section["instructors"]
-    }
+    # data_to_add = {
+    #     "sectionId": section_id,
+    #     "courseCode": course_code,
+    #     "courseName": data["name"],
+    #     "type": target_section["rnrMode"],
+    #     "days": target_section['schedule'][0]["days"],
+    #     "startTime": target_section['schedule'][0]["startTime"],
+    #     "endTime": target_section['schedule'][0]["endTime"],
+    #     "location": target_section['schedule'][0]["location"],
+    #     "units": data["courseUnits"][0],
+    #     "instructors": target_section["instructors"]
+    # }
 
-    # Add this as a document to the user's Firebase, if it hasn't already been updated.
+    # # Add this as a document to the user's Firebase, if it hasn't already been updated.
 
-    return {"status": "success", "data": data_to_add}
+    # return {"status": "success", "data": data_to_add}
 
-def remove_section(section_id: str) -> dict:
+def remove_section(section_id: str, tool_context: ToolContext) -> dict:
     """Removes a specified section from the user's course schedule.
 
     Args:
@@ -179,7 +195,28 @@ def remove_section(section_id: str) -> dict:
     """
 
     print(f"--Tool: remove_section called with section_id {section_id}")
-    return {"status": "success", "section_id": section_id}
+
+    user_id = tool_context._invocation_context.session.user_id
+    # session_id = tool_context._invocation_context.session.id
+    plan_id = tool_context.state.get("plan_id")
+
+    res = requests.delete(
+        url=f"{BACKEND_URL}/plan/delete",
+        params = {
+            "user_id": user_id,
+            "section_id": section_id,
+            "plan_id": plan_id
+        }
+    )
+
+    if res.status_code == 200:
+        return {"status": "success"}
+    else:
+        return {"status": "error", "error_message": "Failed to delete section"}
+
+    # return {"status": "success", "section_id": section_id}
+
+
 
 # Scheduling Agent
 
@@ -214,8 +251,8 @@ root_agent = Agent(
                    Then, ask the user if they would like to add a section.
                    If the user fails to specify a term, ask them for it before calling the tool and giving a response.
                    If the tool fails, simply inform the user and tell them to ensure their information is correct.
-                   You can also access the user's current course plan using 'get_user_plan' to provide more personalized advice.
+                   If you need at any point need the user's current plan to make recommendations, use the 'get_plan_info' tool to retrieve the latest plan. 
                 """,
-    tools=[get_course_info, get_user_plan],
+    tools=[get_course_info, get_plan_info],
     sub_agents=[scheduling_agent]
 )

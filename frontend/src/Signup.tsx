@@ -3,6 +3,12 @@ import { doc, setDoc } from "firebase/firestore";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { db } from "./firebase";
+
+interface UserData {
+    email: string,
+    name: string
+}
 
 export default function Signup() {
 

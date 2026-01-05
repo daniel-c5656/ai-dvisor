@@ -12,6 +12,8 @@ import remarkGfm from 'remark-gfm';
 // Setup for react-big-calendar
 const localizer = momentLocalizer(moment);
 
+const BACKEND_URL: string = "https://ai-dvisor-fastapi-75390045716.us-west1.run.app"
+
 interface InstructorName {
     firstName: string
     lastName: string
@@ -182,6 +184,8 @@ export default function Planpage() {
         // }, 1000);
 
         if (user && planId) {
+            const planInfo = await getDoc(doc(db, "users", user.uid, "coursePlans", planId))
+            const planData = planInfo.data()
 
             // Start a new chat if there's no messages.
             if (messages.length == 0) {
@@ -195,19 +199,28 @@ export default function Planpage() {
 
                 user.getIdToken
                 console.log("Data reset")
-                const deleteRes = await fetch(`/apps/ai-dvisor/users/${user.uid}/sessions/${planId}`, {
-                    method: "DELETE"
-                })
 
-                console.log(deleteRes)
+                if (planData && planData.sessionId) {
+                    const deleteParams = new URLSearchParams()
+                    deleteParams.append("user_id", user.uid)
+                    deleteParams.append("plan_id", planId)
+                    deleteParams.append("session_id", planData.sessionId)
+                    await fetch(`${BACKEND_URL}/session/delete?${deleteParams}`, {
+                        method: "DELETE"
+                    })
+                }
 
+                
 
-                const createRes = await fetch(`/apps/ai-dvisor/users/${user.uid}/sessions/${planId}`, {
-                    method: "POST",
-                    headers: {
-                        'Content-Type': "application/json"
-                    },
-                    body: JSON.stringify({ "context": { "major": major } })
+                // console.log(deleteRes)
+
+                const createParams = new URLSearchParams()
+                createParams.append("user_id", user.uid)
+                createParams.append("plan_id", planId)
+                createParams.append("major", major)
+
+                const createRes = await fetch(`${BACKEND_URL}/session/create?${createParams}`, {
+                    method: "POST"
                 })
 
                 if (createRes.status >= 400) {
@@ -221,15 +234,16 @@ export default function Planpage() {
                     return
                 }
 
-                console.log(createRes)
+                // console.log(createRes)
 
             }
 
             // Make the request.
-            const contextualizedInput = `My current course plan is:\n${JSON.stringify(courses, null, 2)}\n\nMy request is: ${currentInput}`
+            // const contextualizedInput = `My current course plan is:\n${JSON.stringify(courses, null, 2)}\n\nMy request is: ${currentInput}`
 
-            console.log(contextualizedInput)
+            // console.log(contextualizedInput)
 
+            /*
             const agentApiRes = await fetch(`/run`, {
                 method: "POST",
                 headers: {
@@ -250,6 +264,21 @@ export default function Planpage() {
                     streaming: false
                 })
             })
+            */
+            await new Promise(resolve => setTimeout(resolve, 2000))
+            const updatedPlanInfo = await getDoc(doc(db, "users", user.uid, "coursePlans", planId))
+            const updatedPlanData = updatedPlanInfo.data()
+            const askParams = new URLSearchParams()
+            askParams.append("user_id", user.uid)
+            if (updatedPlanData) {
+                askParams.append("session_id", updatedPlanData.sessionId)
+            }
+            askParams.append("message", currentInput)
+            const agentApiRes = await fetch(`${BACKEND_URL}/ask?${askParams}`, {
+                    method: "GET"
+                }
+            )
+            console.log(`${BACKEND_URL}/ask?${askParams}`)
 
             if (agentApiRes.status >= 400) {
                 const agentResponse = {
@@ -260,11 +289,26 @@ export default function Planpage() {
                 setMessages(prev => [...prev, agentResponse])
                 setIsAgentTyping(false)
                 return
+            } else {
+                const agentResData = await agentApiRes.json()
+                console.log(agentResData)
+                const agentText = agentResData.content.parts[0].text
+
+                if (agentText) {
+                const agentResponse = {
+                    id: Date.now(),
+                    text: agentText,
+                    sender: 'agent' as const,
+                };
+                setMessages(prev => [...prev, agentResponse])
+            }
             }
 
-            const agentResData = await agentApiRes.json()
+            
+
+            /*
             const planDataRef = doc(db, "users", user.uid, "coursePlans", planId)
-            // console.log(agentResData)
+            console.log(agentResData)
             agentResData.forEach(async (element: { content: { parts: any[]; }; }) => {
                 const operation = element.content.parts[0]
                 if (operation.functionResponse) {
@@ -299,17 +343,9 @@ export default function Planpage() {
                             break
                     }
                 }
-                if (operation.text) {
-
-                    const agentResponse = {
-                        id: Date.now(),
-                        text: operation.text,
-                        sender: 'agent' as const,
-                    };
-                    setMessages(prev => [...prev, agentResponse])
-                }
             });
-
+            */
+            
         }
         setIsAgentTyping(false)
 
