@@ -2,12 +2,12 @@ import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { db } from "./firebase";
 
 interface UserData {
-    email: string;
-    name: string;
+    email: string,
+    name: string
 }
 
 export default function Signup() {
@@ -74,7 +74,7 @@ export default function Signup() {
 
     return (
         <div className="flex items-center justify-center h-screen">
-            <div className="flex flex-col gap-4 p-8 mx-auto max-w-sm w-full outline rounded-2xl items-center">
+            <div className="flex flex-col gap-4 p-8 mx-auto max-w-sm w-full shadow-lg border border-gray-200 rounded-2xl items-center">
                 <div className="text-2xl">Sign Up</div>
                 <form className="flex flex-col gap-4 w-full" onSubmit={handleAuthenticate}>
                     <div className="flex flex-col">
@@ -83,7 +83,7 @@ export default function Signup() {
                             id="signup-name" 
                             type="text" 
                             name="signup-name" 
-                            className="p-2 outline rounded" 
+                            className="p-2 border border-gray-300 shadow-sm rounded" 
                             value={name} 
                             onChange={(e) => { setName(e.target.value); setError(''); }} 
                         />
@@ -94,7 +94,7 @@ export default function Signup() {
                             id="signup-email" 
                             type="email" 
                             name="signup-email" 
-                            className="p-2 outline rounded" 
+                            className="p-2 border border-gray-300 shadow-sm rounded" 
                             value={email} 
                             onChange={(e) => { setEmail(e.target.value); setError(''); }} 
                         />
@@ -105,7 +105,7 @@ export default function Signup() {
                             id="signup-password"
                             type="password"
                             name="signup-password"
-                            className="p-2 outline rounded"
+                            className="p-2 border border-gray-300 shadow-sm rounded"
                             value={password}
                             onChange={(e) => { setPassword(e.target.value); setError(''); }}
                         />
@@ -116,7 +116,7 @@ export default function Signup() {
                             id="signup-password-confirm" 
                             type="password"
                             name="signup-password-confirm" 
-                            className="p-2 outline rounded"
+                            className="p-2 border border-gray-300 shadow-sm rounded"
                             value={passwordConfirm}
                             onChange={(e) => { setPasswordConfirm(e.target.value); setError(''); }}
                         />
@@ -124,6 +124,9 @@ export default function Signup() {
                     {error && <p className="text-red-500 text-sm text-center">{error}</p>}
                     <button type="submit" className="mt-4 p-2 bg-blue-500 text-white rounded hover:bg-blue-600 cursor-pointer">Submit</button>
                 </form>
+                <p className="mt-2 text-sm text-gray-600">
+                    Already have an account? <Link to="/login" className="text-blue-500 hover:underline">Login here.</Link>
+                </p>
             </div>
         </div>
     );

@@ -1,7 +1,7 @@
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function Login() {
 
@@ -43,7 +43,7 @@ export default function Login() {
 
     return (
         <div className="flex items-center justify-center h-screen">
-            <div className="flex flex-col gap-4 p-8 mx-auto max-w-sm w-full outline rounded-2xl items-center">
+            <div className="flex flex-col gap-4 p-8 mx-auto max-w-sm w-full shadow-lg border border-gray-200 rounded-2xl items-center">
                 <div className="text-2xl">Login</div>
                 <form className="flex flex-col gap-4 w-full" onSubmit={handleAuthenticate}>
                     <div className="flex flex-col">
@@ -52,7 +52,7 @@ export default function Login() {
                             id="login-email" 
                             type="email" 
                             name="login-email" 
-                            className="p-2 outline rounded" 
+                            className="p-2 border border-gray-300 shadow-sm rounded" 
                             value={email} 
                             onChange={(e) => { setEmail(e.target.value); setError(''); }} 
                         />
@@ -63,7 +63,7 @@ export default function Login() {
                             id="login-password"
                             type="password"
                             name="login-password"
-                            className="p-2 outline rounded"
+                            className="p-2 border border-gray-300 shadow-sm rounded"
                             value={password}
                             onChange={(e) => { setPassword(e.target.value); setError(''); }}
                         />
@@ -71,6 +71,9 @@ export default function Login() {
                     {error && <p className="text-red-500 text-sm text-center">{error}</p>}
                     <button type="submit" className="mt-4 p-2 bg-blue-500 text-white rounded hover:bg-blue-600 cursor-pointer">Submit</button>
                 </form>
+                <p className="mt-2 text-sm text-gray-600">
+                    Don't have an account? <Link to="/signup" className="text-blue-500 hover:underline">Sign up here.</Link>
+                </p>
             </div>
         </div>
     );

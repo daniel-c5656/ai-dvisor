@@ -12,6 +12,8 @@ import remarkGfm from 'remark-gfm';
 // Setup for react-big-calendar
 const localizer = momentLocalizer(moment);
 
+const BACKEND_URL: string = "https://ai-dvisor-fastapi-75390045716.us-west1.run.app"
+
 interface InstructorName {
     firstName: string
     lastName: string
@@ -150,7 +152,7 @@ export default function Planpage() {
         let res = ""
 
         for (let i = 0; i < instructorList.length - 1; i++) {
-            res += instructorList[i].lastName + ", " + instructorList[i].firstName
+            res += instructorList[i].lastName + ", " + instructorList[i].firstName + "; "
         }
         res += instructorList[instructorList.length - 1].lastName + ", " + instructorList[instructorList.length - 1].firstName
         return res
@@ -182,6 +184,8 @@ export default function Planpage() {
         // }, 1000);
 
         if (user && planId) {
+            const planInfo = await getDoc(doc(db, "users", user.uid, "coursePlans", planId))
+            const planData = planInfo.data()
 
             // Start a new chat if there's no messages.
             if (messages.length == 0) {
@@ -195,19 +199,28 @@ export default function Planpage() {
 
                 user.getIdToken
                 console.log("Data reset")
-                const deleteRes = await fetch(`/apps/ai-dvisor/users/${user.uid}/sessions/${planId}`, {
-                    method: "DELETE"
-                })
 
-                console.log(deleteRes)
+                if (planData && planData.sessionId) {
+                    const deleteParams = new URLSearchParams()
+                    deleteParams.append("user_id", user.uid)
+                    deleteParams.append("plan_id", planId)
+                    deleteParams.append("session_id", planData.sessionId)
+                    await fetch(`${BACKEND_URL}/session/delete?${deleteParams}`, {
+                        method: "DELETE"
+                    })
+                }
 
+                
 
-                const createRes = await fetch(`/apps/ai-dvisor/users/${user.uid}/sessions/${planId}`, {
-                    method: "POST",
-                    headers: {
-                        'Content-Type': "application/json"
-                    },
-                    body: JSON.stringify({ "context": { "major": major } })
+                // console.log(deleteRes)
+
+                const createParams = new URLSearchParams()
+                createParams.append("user_id", user.uid)
+                createParams.append("plan_id", planId)
+                createParams.append("major", major)
+
+                const createRes = await fetch(`${BACKEND_URL}/session/create?${createParams}`, {
+                    method: "POST"
                 })
 
                 if (createRes.status >= 400) {
@@ -221,15 +234,16 @@ export default function Planpage() {
                     return
                 }
 
-                console.log(createRes)
+                // console.log(createRes)
 
             }
 
             // Make the request.
-            const contextualizedInput = `My current course plan is:\n${JSON.stringify(courses, null, 2)}\n\nMy request is: ${currentInput}`
+            // const contextualizedInput = `My current course plan is:\n${JSON.stringify(courses, null, 2)}\n\nMy request is: ${currentInput}`
 
-            console.log(contextualizedInput)
+            // console.log(contextualizedInput)
 
+            /*
             const agentApiRes = await fetch(`/run`, {
                 method: "POST",
                 headers: {
@@ -250,6 +264,21 @@ export default function Planpage() {
                     streaming: false
                 })
             })
+            */
+            await new Promise(resolve => setTimeout(resolve, 2000))
+            const updatedPlanInfo = await getDoc(doc(db, "users", user.uid, "coursePlans", planId))
+            const updatedPlanData = updatedPlanInfo.data()
+            const askParams = new URLSearchParams()
+            askParams.append("user_id", user.uid)
+            if (updatedPlanData) {
+                askParams.append("session_id", updatedPlanData.sessionId)
+            }
+            askParams.append("message", currentInput)
+            const agentApiRes = await fetch(`${BACKEND_URL}/ask?${askParams}`, {
+                    method: "GET"
+                }
+            )
+            console.log(`${BACKEND_URL}/ask?${askParams}`)
 
             if (agentApiRes.status >= 400) {
                 const agentResponse = {
@@ -260,11 +289,26 @@ export default function Planpage() {
                 setMessages(prev => [...prev, agentResponse])
                 setIsAgentTyping(false)
                 return
+            } else {
+                const agentResData = await agentApiRes.json()
+                console.log(agentResData)
+                const agentText = agentResData.content.parts[0].text
+
+                if (agentText) {
+                const agentResponse = {
+                    id: Date.now(),
+                    text: agentText,
+                    sender: 'agent' as const,
+                };
+                setMessages(prev => [...prev, agentResponse])
+            }
             }
 
-            const agentResData = await agentApiRes.json()
+            
+
+            /*
             const planDataRef = doc(db, "users", user.uid, "coursePlans", planId)
-            // console.log(agentResData)
+            console.log(agentResData)
             agentResData.forEach(async (element: { content: { parts: any[]; }; }) => {
                 const operation = element.content.parts[0]
                 if (operation.functionResponse) {
@@ -299,17 +343,9 @@ export default function Planpage() {
                             break
                     }
                 }
-                if (operation.text) {
-
-                    const agentResponse = {
-                        id: Date.now(),
-                        text: operation.text,
-                        sender: 'agent' as const,
-                    };
-                    setMessages(prev => [...prev, agentResponse])
-                }
             });
-
+            */
+            
         }
         setIsAgentTyping(false)
 
@@ -328,10 +364,21 @@ export default function Planpage() {
         }
     }
 
+    async function handleDeleteCourse(course: CourseSection) {
+
+        setCourses(courses.filter(c => c.sectionId !== course.sectionId));
+        if (user && planId) {
+            const planDocRef = doc(db, "users", user.uid, "coursePlans", planId)
+            await updateDoc(planDocRef, {
+                courses: arrayRemove(course)
+            })
+        }
+    }
+
     return (
         <>
             <div>
-                <div className="m-5 text-5xl">{planTitle}</div>
+                <div className="m-5 text-4xl">{planTitle}</div>
                 <div className="grid grid-flow-col grid-cols-3 p-5 gap-5">
                     <div className="col-span-2">
                         <div className="grid grid-cols-2 gap-4 p-2 text-left">
@@ -365,13 +412,22 @@ export default function Planpage() {
                                         <ul>
                                             {courses.map((course) => (
                                                 <li key={course.sectionId} className="p-4 my-2 border rounded-lg shadow-md bg-white">
+                                                    <div className="flex justify-end">
+                                                        <button
+                                                            className='bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded cursor-pointer'
+                                                            onClick={() => {if (confirm('Are you sure you want to delete this course?')) handleDeleteCourse(course)}}
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    </div>
                                                     <p className="font-bold text-xl">{course.courseCode} - {course.courseName}</p>
                                                     <p className="text-gray-700">Section: {course.sectionId} ({course.type})</p>
                                                     <p className="text-gray-700">Time: {course.days.join(', ')} {course.startTime} - {course.endTime}</p>
                                                     <p className="text-gray-700">Location: {course.location}</p>
                                                     <p className="text-gray-700">Units: {course.units}</p>
                                                     <p className="text-gray-700">Instructors: {instructorsClean(course.instructors)}</p>
-                                                </li>
+                                                
+                                                </li>                                                
                                             ))}
                                         </ul>
                                     ) : (
@@ -382,14 +438,14 @@ export default function Planpage() {
                         }
                     </div>
                     <div className="col-span-1">
-                        <div className="outline rounded h-full p-4 flex flex-col" style={{ height: '80vh' }}>
+                        <div className="shadow-lg border border-gray-200 rounded h-full p-4 flex flex-col" style={{ height: '80vh' }}>
                             <div className="flex justify-between items-center mb-4">
                                 <h2 className="text-2xl font-bold text-left">AI-dvisor</h2>
                                 <button onClick={handleAgentReset} className="bg-gray-300 hover:bg-gray-400 text-black font-bold py-1 px-2 rounded text-sm cursor-pointer">
                                     Reset
                                 </button>
                             </div>
-                            <div ref={chatContainerRef} className="flex-grow overflow-y-auto mb-4 p-2 space-y-4 bg-gray-50 rounded">
+                            <div ref={chatContainerRef} className="flex-grow overflow-y-auto mb-4 p-2 space-y-4 rounded">
                                 {messages.map(message => (
                                     <div key={message.id} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                                         <div className={`rounded-lg px-3 py-2 max-w-xl ${message.sender === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-black'}`}>
@@ -408,7 +464,7 @@ export default function Planpage() {
                             <div className="flex">
                                 <input
                                     type="text"
-                                    className="flex-grow border rounded-l-lg p-2"
+                                    className="flex-grow border border-gray-300 shadow-sm rounded-l-lg p-2"
                                     placeholder="Ask me anything..."
                                     value={inputValue}
                                     onChange={(e) => setInputValue(e.target.value)}

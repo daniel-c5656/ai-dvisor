@@ -67,7 +67,7 @@ export default function Profile() {
 
     return (
         <div className="flex items-center justify-center h-screen">
-            <div className="flex flex-col gap-4 p-8 mx-auto max-w-xl w-full outline rounded-2xl items-center">
+            <div className="flex flex-col gap-4 p-8 mx-auto max-w-xl w-full shadow-lg border border-gray-200 rounded-2xl items-center">
                 <div className="text-2xl">Profile</div>
                 <form className="flex flex-col gap-4 w-full" onSubmit={handleSubmit}>
                     <div className="flex flex-col">
@@ -76,7 +76,7 @@ export default function Profile() {
                         <input type="text"
                             id="profile-name"
                             name="profile-name"
-                            className="p-2 outline rounded"
+                            className="p-2 border border-gray-300 shadow-sm rounded"
                             value={name}
                             onChange={(e) => {setName(e.target.value)}}
                         
@@ -87,7 +87,7 @@ export default function Profile() {
                         <input type="text"
                             id="user-email"
                             name="user-email"
-                            className="p-2 outline rounded bg-gray-200"
+                            className="p-2 border border-gray-300 shadow-sm rounded bg-gray-200"
                             value={email}
                             onChange={(e) => {setEmail(e.target.value)}}
                             disabled
@@ -97,7 +97,7 @@ export default function Profile() {
 
                     <div className="flex flex-col">
                         <label htmlFor="major" className="mb-1">Major</label>
-                        <select className="p-2 outline rounded"
+                        <select className="p-2 border border-gray-300 shadow-sm rounded"
                                 id="major" 
                                 name="major" 
                                 value={major} 
@@ -108,7 +108,7 @@ export default function Profile() {
                     </div>
                     <div className="flex flex-col">
                         <label htmlFor="school" className="mb-1">School</label>
-                        <select className="p-2 outline rounded" id="school" name="school" value={school} onChange={(e) => {setSchool(e.target.value)}}>
+                        <select className="p-2 border border-gray-300 shadow-sm rounded" id="school" name="school" value={school} onChange={(e) => {setSchool(e.target.value)}}>
                             <option value="">--Please choose an option--</option>
                             <option value="usc">University of Southern California (USC)</option>
                         </select>
