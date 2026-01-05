@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
-import { doc, updateDoc, onSnapshot, getDoc, arrayUnion, arrayRemove, deleteField } from "firebase/firestore";
+import { doc, updateDoc, onSnapshot, getDoc, arrayRemove, deleteField } from "firebase/firestore";
 import { db } from './firebase.tsx';
 import { Calendar, momentLocalizer, type Event as CalendarEvent } from 'react-big-calendar';
 import moment from 'moment';
