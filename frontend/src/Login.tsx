@@ -1,4 +1,4 @@
-import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -10,6 +10,33 @@ export default function Login() {
     const [email, setEmail] = useState<string>('');
     const [password, setPassword] = useState<string>('');
     const [error, setError] = useState<string>('');
+    const [message, setMessage] = useState<string>('');
+
+    function handleForgotPassword() {
+        if (!email) {
+            setError("Please enter your email address to reset your password.");
+            setMessage('');
+            return;
+        }
+
+        sendPasswordResetEmail(auth, email)
+            .then(() => {
+                setMessage("Password reset email sent! Check your inbox.");
+                setError('');
+            })
+            .catch((firebaseError) => {
+                switch (firebaseError.code) {
+                    case 'auth/user-not-found':
+                    case 'auth/invalid-email':
+                        setError('No user found with this email or invalid email format.');
+                        break;
+                    default:
+                        setError('Failed to send reset email. Please try again.');
+                        break;
+                    }
+                setMessage('');
+            });
+    }
 
     function handleAuthenticate(e: FormEvent) {
         e.preventDefault();
@@ -54,7 +81,7 @@ export default function Login() {
                             name="login-email" 
                             className="p-2 border border-gray-300 shadow-sm rounded" 
                             value={email} 
-                            onChange={(e) => { setEmail(e.target.value); setError(''); }} 
+                            onChange={(e) => { setEmail(e.target.value); setError(''); setMessage(''); }} 
                         />
                     </div>
                     <div className="flex flex-col">
@@ -65,15 +92,25 @@ export default function Login() {
                             name="login-password"
                             className="p-2 border border-gray-300 shadow-sm rounded"
                             value={password}
-                            onChange={(e) => { setPassword(e.target.value); setError(''); }}
+                            onChange={(e) => { setPassword(e.target.value); setError(''); setMessage(''); }}
                         />
                     </div>
                     {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+                    {message && <p className="text-green-500 text-sm text-center">{message}</p>}
                     <button type="submit" className="mt-4 p-2 bg-blue-500 text-white rounded hover:bg-blue-600 cursor-pointer">Submit</button>
                 </form>
-                <p className="mt-2 text-sm text-gray-600">
-                    Don't have an account? <Link to="/signup" className="text-blue-500 hover:underline">Sign up here.</Link>
-                </p>
+                <div className="flex flex-col items-center gap-2 mt-2">
+                    <p className="text-sm text-gray-600">
+                        Don't have an account? <Link to="/signup" className="text-blue-500 hover:underline">Sign up here.</Link>
+                    </p>
+                    <button 
+                        type="button" 
+                        onClick={handleForgotPassword} 
+                        className="text-sm text-blue-500 hover:underline cursor-pointer"
+                    >
+                        Forgot password?
+                    </button>
+                </div>
             </div>
         </div>
     );
