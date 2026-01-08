@@ -197,9 +197,6 @@ export default function Planpage() {
                     major = userData.major
                 }
 
-                user.getIdToken
-                console.log("Data reset")
-
                 if (planData && planData.sessionId) {
                     const deleteParams = new URLSearchParams()
                     deleteParams.append("user_id", user.uid)
@@ -295,13 +292,13 @@ export default function Planpage() {
                 const agentText = agentResData.content.parts[0].text
 
                 if (agentText) {
-                const agentResponse = {
-                    id: Date.now(),
-                    text: agentText,
-                    sender: 'agent' as const,
-                };
-                setMessages(prev => [...prev, agentResponse])
-            }
+                    const agentResponse = {
+                        id: Date.now(),
+                        text: agentText,
+                        sender: 'agent' as const,
+                    };
+                    setMessages(prev => [...prev, agentResponse])
+                }
             }
 
             

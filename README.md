@@ -21,8 +21,12 @@ You absolutely could. However, those LLMs only have knowledge on the previous se
 
 ## Working Functions
 
-- Add/remove sections
-- Ask about courses/sections
+- Add/remove/swap sections
+- Ask about specific courses/sections
+- Search for courses by simple keyword
+- Ask about major and suggested courses
+- Ask about current plan details
+- Professor lookup based on online feedback
 
 ## About
-AI-dvisor written by Daniel Chen, USC Class of 2027. Built with React, Firebase, and Google ADK.
+AI-dvisor written by Daniel Chen, USC Class of 2027. Built with React, Firebase, FastAPI, and Google ADK.

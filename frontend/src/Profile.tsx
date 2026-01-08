@@ -3,6 +3,7 @@ import { useAuth } from "./useAuth"
 import { doc, getDoc, updateDoc } from "firebase/firestore"
 import { db } from "./firebase"
 import { useNavigate } from "react-router-dom"
+import { majorCodes } from "./majorCodes"
 
 
 export default function Profile() {
@@ -103,7 +104,10 @@ export default function Profile() {
                                 value={major} 
                                 onChange={(e) => {setMajor(e.target.value)}}>
                             <option value="">--Please choose an option--</option>
-                            <option value="computerscience">Computer Science</option>
+                            {Object.entries(majorCodes).map((major, index) => (
+                                <option key={index} value={major[0]}>{major[1]}</option>
+                            ))}
+                            
                         </select>
                     </div>
                     <div className="flex flex-col">
